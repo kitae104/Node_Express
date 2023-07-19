@@ -2,11 +2,21 @@ const express = require('express')  //③번 단계에서 다운받았던 expres
 const fs = require('fs');
 const path = require('path');
 const qs = require('querystring');
+const bodyParser = require('body-parser');
 const sanitizeHtml = require('sanitize-html');
+const compression = require('compression');
 let template = require('./lib/template.js');
 
 const app = express()               //가져온 express 모듈의 function을 이용해서 새로운 express 앱을 만든다. 🔥
 const port = 3000                   //포트는 3000번 해도되고, 5000번 해도 된다. -> 이번엔 3000번 포트를 백 서버로 두겠다.
+
+//==============================
+// 미들웨어
+//==============================
+// parse application/x-www-form-urlencoded
+app.use(bodyParser.urlencoded({ extended: false }));  //body-parser를 이용해서, post 방식으로 전송된 데이터를, 원래의 데이터로 변환한다.
+app.use(compression());                               //압축을 해서, 전송한다. (속도가 빨라진다.
+
 
 //==============================
 // 라우트
@@ -69,19 +79,13 @@ app.get('/create', function(req, res){
 });
 
 app.post('/create_process', function(req, res){
-  var body = '';
-  req.on('data', function(data){
-      body = body + data;
-  });
-  req.on('end', function(){
-      var post = qs.parse(body);
-      var title = post.title;
-      var description = post.description;
-      fs.writeFile(`data/${title}`, description, 'utf8', function(err){
-        res.writeHead(302, {Location: `/?id=${title}`});
-        res.end();
-      }); 
-  });
+  var post = req.body;          // body-parser를 이용해서, post 방식으로 전송된 데이터를, 원래의 데이터로 변환한다.
+  var title = post.title;
+  var description = post.description;
+  fs.writeFile(`data/${title}`, description, 'utf8', function(err){
+    res.writeHead(302, {Location: `/?id=${title}`});
+    res.end();
+  }); 
 }); 
 
 app.get('/update/:pageId', function(req, res){
@@ -110,37 +114,26 @@ app.get('/update/:pageId', function(req, res){
   });
 });
 
-app.post('/update_process', function(req, res){
-  var body = '';
-      req.on('data', function(data){
-          body = body + data;
-      });
-      req.on('end', function(){
-          var post = qs.parse(body);
-          var id = post.id;
-          var title = post.title;
-          var description = post.description;
-          fs.rename(`data/${id}`, `data/${title}`, function(error){
-            fs.writeFile(`data/${title}`, description, 'utf8', function(err){
-              res.redirect(`/?id=${title}`)
-            })
-          });
-      });
+app.post('/update_process', function(req, res){  
+  var post = req.body;        // body-parser를 이용해서, post 방식으로 전송된 데이터를, 원래의 데이터로 변환한다.
+  var id = post.id;
+  var title = post.title;
+  var description = post.description;
+  fs.rename(`data/${id}`, `data/${title}`, function(error){
+    fs.writeFile(`data/${title}`, description, 'utf8', function(err){
+      res.redirect(`/?id=${title}`)
+    })
+  });
+  
 });
 
-app.post('/delete_process', function(req, res){
-  var body = '';
-  req.on('data', function(data){
-      body = body + data;
-  });
-  req.on('end', function(){
-      var post = qs.parse(body);
-      var id = post.id;
-      var filteredId = path.parse(id).base;
-      fs.unlink(`data/${filteredId}`, function(error){
-        res.redirect('/');
-      })
-  });    
+app.post('/delete_process', function(req, res){  
+  var post = req.body;      // body-parser를 이용해서, post 방식으로 전송된 데이터를, 원래의 데이터로 변환한다.
+  var id = post.id;
+  var filteredId = path.parse(id).base;
+  fs.unlink(`data/${filteredId}`, function(error){
+    res.redirect('/');
+  });  
 });
 
 //==============================
