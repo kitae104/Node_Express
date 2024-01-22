@@ -1,6 +1,7 @@
 const dotenv = require('dotenv');
 const express = require('express');
 const path = require('path');
+const nunjucks = require('nunjucks');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 const session = require("express-session");
@@ -21,6 +22,9 @@ const app = express();
 // 포트 설정
 //===============================
 app.set('port', process.env.PORT || 3000);
+
+app.set("view engine", "ejs"); // ejs 템플릿 엔진 사용
+app.set('views', path.join(__dirname, 'views'));
 
 //===============================
 // 미들웨어 설정(순서가 중요함!)
