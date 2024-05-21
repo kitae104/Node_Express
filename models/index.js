@@ -1,43 +1,23 @@
-'use strict';
-
-const fs = require('fs');
-const path = require('path');
 const Sequelize = require('sequelize');
-const process = require('process');
-const basename = path.basename(__filename);
-const env = process.env.NODE_ENV || 'development';
-const config = require(__dirname + '/../config/config.json')[env];
-const db = {};
+const User = require('./user');
+const Comment = require('./comment');
 
-let sequelize;
-if (config.use_env_variable) {
-  sequelize = new Sequelize(process.env[config.use_env_variable], config);
-} else {
-  sequelize = new Sequelize(config.database, config.username, config.password, config);
-}
+const env = process.env.NODE_ENV || 'development';    // NODE_ENV 환경변수가 설정되어 있지 않다면 development 모드로 설정
+const config = require('../config/config')[env];      // config.json 파일에서 development 항목을 불러옴
+const db = {};                                        // db 객체 생성
 
-fs
-  .readdirSync(__dirname)
-  .filter(file => {
-    return (
-      file.indexOf('.') !== 0 &&
-      file !== basename &&
-      file.slice(-3) === '.js' &&
-      file.indexOf('.test.js') === -1
-    );
-  })
-  .forEach(file => {
-    const model = require(path.join(__dirname, file))(sequelize, Sequelize.DataTypes);
-    db[model.name] = model;
-  });
+const sequelize = new Sequelize(config.database, config.username, config.password, config);   // Sequelize 생성자를 통해 MySQL 연결 객체 생성
 
-Object.keys(db).forEach(modelName => {
-  if (db[modelName].associate) {
-    db[modelName].associate(db);
-  }
-});
+db.sequelize = sequelize;       // db 객체에 sequelize 속성 추가
+db.Sequelize = Sequelize;       // db 객체에 Sequelize 속성 추가
 
-db.sequelize = sequelize;
-db.Sequelize = Sequelize;
+db.User = User;                 // db 객체에 User 모델 연결
+db.Comment = Comment;           // db 객체에 Comment 모델 연결
 
-module.exports = db;
+User.init(sequelize);           // User 모델과 MySQL 연결
+Comment.init(sequelize);        // Comment 모델과 MySQL 연결
+
+User.associate(db);             // User 모델과 Comment 모델의 관계를 정의
+Comment.associate(db);          // Comment 모델과 User 모델의 관계를 정의
+
+module.exports = db;            // db 객체를 모듈로 반환

@@ -8,6 +8,9 @@ const session = require("express-session");
 const multer = require("multer");
 const fs = require("fs");
 
+// DB 연결
+const { sequelize } = require('./models');
+
 //===============================
 // 익스프레스 객체 생성
 //===============================
@@ -23,8 +26,26 @@ const app = express();
 //===============================
 app.set('port', process.env.PORT || 3000);
 
-app.set("view engine", "ejs"); // ejs 템플릿 엔진 사용
-app.set('views', path.join(__dirname, 'views'));
+
+//===============================
+// 탬플릿 엔진 설정
+//===============================
+app.set("view engine", "html"); 
+//app.set('views', path.join(__dirname, 'views'));
+nunjucks.configure('views', {
+  express: app,
+  watch: true,
+});
+
+// DB 연결
+sequelize.sync({ force: false })
+  .then(() => {
+    console.log('데이터베이스 연결 성공');
+  })
+  .catch((err) => {
+    console.error(err);
+  });
+
 
 //===============================
 // 미들웨어 설정(순서가 중요함!)
@@ -107,21 +128,25 @@ app.get("/category/:name", (req, res) => {
 //===============================
 // 404 에러 처리 미들웨어
 //===============================
-app.use((req, res, next) => { 
-  res.status(404).send("404 에러");
+app.use((req, res, next) => {
+  const error =  new Error(`${req.method} ${req.url} 라우터가 없습니다.`);
+  error.status = 404;
+  next(error);
 });
 
 //===============================
 // 에러 처리 미들웨어
 //===============================
-app.use((err, req, res, next) => { 
-  console.error(err);
-  res.status(500).send(err.message);
+app.use((err, req, res, next) => {
+  res.locals.message = err.message;
+  res.locals.error = process.env.NODE_ENV !== 'production' ? err : {};
+  res.status(err.status || 500);
+  res.render('error');
 });
 
 //===============================
 // 서버 실행
 //===============================
 app.listen(app.get('port'), () => {
-  console.log('port 3000 실행!');
+  console.log(app.get('port'), '번 포트에서 대기 중');
 });
